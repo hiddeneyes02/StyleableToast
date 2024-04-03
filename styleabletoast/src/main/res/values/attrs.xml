@@ -13,6 +13,8 @@
         <attr name="stStrokeColor" format="color" />
         <attr name="stIconStart" format="reference" />
         <attr name="stIconEnd" format="reference" />
+        <attr name="stIconSize" format="dimension" />
+        <attr name="stVerticalPadding" format="dimension" />
         <attr name="stLength" format="integer">
             <enum name="LONG" value="1" />
             <enum name="SHORT" value="0" />

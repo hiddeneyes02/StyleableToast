@@ -11,11 +11,13 @@ import android.graphics.drawable.GradientDrawable;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.ColorInt;
+import androidx.annotation.ColorRes;
 import androidx.annotation.DrawableRes;
 import androidx.annotation.FontRes;
 import androidx.annotation.NonNull;
@@ -24,15 +26,20 @@ import androidx.core.content.ContextCompat;
 import androidx.core.content.res.ResourcesCompat;
 import androidx.core.widget.TextViewCompat;
 
+import org.jetbrains.annotations.Contract;
+
+
 @SuppressLint("ViewConstructor")
 public class StyleableToast extends LinearLayout {
 
+    @DrawableRes private int iconStart;
+    @DrawableRes private int iconEnd;
+    private int iconSize;
     private int cornerRadius;
     private int backgroundColor;
     private int strokeColor;
     private int strokeWidth;
-    private int iconStart;
-    private int iconEnd;
+    private int verticalPadding;
     private int textColor;
     private int font;
     private int length;
@@ -41,17 +48,23 @@ public class StyleableToast extends LinearLayout {
     private boolean isTextSizeFromStyleXml = false;
     private boolean solidBackground;
     private boolean textBold;
-    private String text;
+    private final String text;
     private TypedArray typedArray;
     private TextView textView;
+    private ImageView iconStartView;
+    private ImageView iconEndView;
     private int gravity;
     private Toast toast;
     private LinearLayout rootLayout;
 
+    @NonNull
+    @Contract("_, _, _, _ -> new")
     public static StyleableToast makeText(@NonNull Context context, String text, int length, @StyleRes int style) {
         return new StyleableToast(context, text, length, style);
     }
 
+    @NonNull
+    @Contract("_, _, _ -> new")
     public static StyleableToast makeText(@NonNull Context context, String text, @StyleRes int style) {
         return new StyleableToast(context, text, Toast.LENGTH_SHORT, style);
     }
@@ -63,12 +76,18 @@ public class StyleableToast extends LinearLayout {
         this.style = style;
     }
 
-    private StyleableToast(Builder builder) {
+    private StyleableToast(@NonNull Builder builder) {
         super(builder.context);
         this.backgroundColor = builder.backgroundColor;
         this.cornerRadius = builder.cornerRadius;
         this.iconEnd = builder.iconEnd;
         this.iconStart = builder.iconStart;
+        this.iconSize =
+              builder.iconSize == -1 ? (int) getResources().getDimension(R.dimen.default_icon_size) :
+              builder.iconSize;
+        this.verticalPadding =
+              builder.verticalPadding == -1 ? (int) getResources().getDimension(R.dimen.toast_vertical_padding) :
+              builder.verticalPadding;
         this.strokeColor = builder.strokeColor;
         this.strokeWidth = builder.strokeWidth;
         this.solidBackground = builder.solidBackground;
@@ -84,7 +103,10 @@ public class StyleableToast extends LinearLayout {
     private void inflateToastLayout() {
         View v = inflate(getContext(), R.layout.styleable_layout, null);
         rootLayout = (LinearLayout) v.getRootView();
-        textView = v.findViewById(R.id.textview);
+        textView = v.findViewById(R.id.text);
+        iconStartView = v.findViewById(R.id.iconStart);
+        iconEndView = v.findViewById(R.id.iconEnd);
+
         if (style > 0) {
             typedArray = getContext().obtainStyledAttributes(style, R.styleable.StyleableToast);
         }
@@ -144,6 +166,7 @@ public class StyleableToast extends LinearLayout {
     private void makeTextView() {
         loadTextViewAttributes();
         textView.setText(text);
+
         if (textColor != 0) {
             textView.setTextColor(textColor);
         }
@@ -161,53 +184,45 @@ public class StyleableToast extends LinearLayout {
 
     private void makeIcon() {
         loadIconAttributes();
-        int paddingVertical = (int) getResources().getDimension(R.dimen.toast_vertical_padding);
-        int paddingHorizontal1 = (int) getResources().getDimension(R.dimen.toast_horizontal_padding_icon_side);
+        int paddingHorizontal = (int) getResources().getDimension(R.dimen.toast_horizontal_padding_icon_side);
         int paddingNoIcon = (int) getResources().getDimension(R.dimen.toast_horizontal_padding_empty_side);
-        int iconSize = (int) getResources().getDimension(R.dimen.icon_size);
 
         if (iconStart != 0) {
-            Drawable drawable = ContextCompat.getDrawable(getContext(), iconStart);
-            if (drawable != null) {
-                drawable.setBounds(0, 0, iconSize, iconSize);
-                TextViewCompat.setCompoundDrawablesRelative(textView, drawable, null, null, null);
-                if (Utils.isRTL()) {
-                    rootLayout.setPadding(paddingNoIcon, paddingVertical, paddingHorizontal1, paddingVertical);
-                } else {
-                    rootLayout.setPadding(paddingHorizontal1, paddingVertical, paddingNoIcon, paddingVertical);
-                }
+            iconStartView.setVisibility(VISIBLE);
+            iconStartView.setMaxWidth(iconSize);
+            iconStartView.setMaxHeight(iconSize);
+            iconStartView.setLayoutParams(new LayoutParams(iconSize, iconSize));
+            iconStartView.setImageDrawable(ContextCompat.getDrawable(getContext(), iconStart));
+
+            if (Utils.isRTL()) {
+                rootLayout.setPadding(paddingNoIcon, verticalPadding, paddingHorizontal, verticalPadding);
+            } else {
+                rootLayout.setPadding(paddingHorizontal, verticalPadding, paddingNoIcon, verticalPadding);
             }
         }
 
         if (iconEnd != 0) {
-            Drawable drawable = ContextCompat.getDrawable(getContext(), iconEnd);
-            if (drawable != null) {
-                drawable.setBounds(0, 0, iconSize, iconSize);
-                TextViewCompat.setCompoundDrawablesRelative(textView, null, null, drawable, null);
-                if (Utils.isRTL()) {
-                    rootLayout.setPadding(paddingHorizontal1, paddingVertical, paddingNoIcon, paddingVertical);
-                } else {
-                    rootLayout.setPadding(paddingNoIcon, paddingVertical, paddingHorizontal1, paddingVertical);
-                }
+            iconEndView.setVisibility(VISIBLE);
+            iconEndView.setMaxWidth(iconSize);
+            iconEndView.setMaxHeight(iconSize);
+            iconEndView.setLayoutParams(new LayoutParams(iconSize, iconSize));
+            iconEndView.setImageDrawable(ContextCompat.getDrawable(getContext(), iconEnd));
+
+            if (Utils.isRTL()) {
+                rootLayout.setPadding(paddingHorizontal, verticalPadding, paddingNoIcon, verticalPadding);
+            } else {
+                rootLayout.setPadding(paddingNoIcon, verticalPadding, paddingHorizontal, verticalPadding);
             }
         }
 
         if (iconStart != 0 && iconEnd != 0) {
-            Drawable drawableLeft = ContextCompat.getDrawable(getContext(), iconStart);
-            Drawable drawableRight = ContextCompat.getDrawable(getContext(), iconEnd);
-            if (drawableLeft != null && drawableRight != null) {
-                drawableLeft.setBounds(0, 0, iconSize, iconSize);
-                drawableRight.setBounds(0, 0, iconSize, iconSize);
-                textView.setCompoundDrawables(drawableLeft, null, drawableRight, null);
-                rootLayout.setPadding(paddingHorizontal1, paddingVertical, paddingHorizontal1, paddingVertical);
-            }
+            rootLayout.setPadding(paddingHorizontal, verticalPadding, paddingHorizontal, verticalPadding);
         }
     }
 
     /**
      * loads style attributes from styles.xml if a style resource is used.
      */
-
     private void loadShapeAttributes() {
         if (style == 0) {
             return;
@@ -215,10 +230,12 @@ public class StyleableToast extends LinearLayout {
 
         int defaultBackgroundColor = ContextCompat.getColor(getContext(), R.color.default_background_color);
         int defaultCornerRadius = (int) getResources().getDimension(R.dimen.default_corner_radius);
+        int defaultVerticalPadding = (int) getResources().getDimension(R.dimen.toast_vertical_padding);
 
         solidBackground = typedArray.getBoolean(R.styleable.StyleableToast_stSolidBackground, false);
         backgroundColor = typedArray.getColor(R.styleable.StyleableToast_stColorBackground, defaultBackgroundColor);
         cornerRadius = (int) typedArray.getDimension(R.styleable.StyleableToast_stRadius, defaultCornerRadius);
+        verticalPadding = (int) typedArray.getDimension(R.styleable.StyleableToast_stVerticalPadding, defaultVerticalPadding);
         length = typedArray.getInt(R.styleable.StyleableToast_stLength, 0);
         gravity = typedArray.getInt(R.styleable.StyleableToast_stGravity, Gravity.BOTTOM);
 
@@ -251,18 +268,24 @@ public class StyleableToast extends LinearLayout {
         if (style == 0) {
             return;
         }
+
+        int defaultIconSize = (int) getResources().getDimension(R.dimen.default_icon_size);
         iconStart = typedArray.getResourceId(R.styleable.StyleableToast_stIconStart, 0);
         iconEnd = typedArray.getResourceId(R.styleable.StyleableToast_stIconEnd, 0);
+        iconSize = (int) typedArray.getDimension(R.styleable.StyleableToast_stIconSize, defaultIconSize);
     }
 
     public static class Builder {
+        private final Context context;
+        @DrawableRes private int iconStart;
+        @DrawableRes private int iconEnd;
+        @ColorInt private int textColor;
+        @ColorInt private int strokeColor;
         private int cornerRadius = -1;
         private int backgroundColor;
-        private int strokeColor;
         private int strokeWidth;
-        private int iconStart;
-        private int iconEnd;
-        private int textColor;
+        private int verticalPadding = -1;
+        private int iconSize = -1;
         private int font;
         private int length;
         private float textSize;
@@ -271,7 +294,6 @@ public class StyleableToast extends LinearLayout {
         private String text;
         private int gravity = Gravity.BOTTOM;
         private StyleableToast toast;
-        private final Context context;
 
         public Builder(@NonNull Context context) {
             this.context = context;
@@ -321,6 +343,21 @@ public class StyleableToast extends LinearLayout {
         public Builder stroke(int strokeWidth, @ColorInt int strokeColor) {
             this.strokeWidth = Utils.toDp(context, strokeWidth);
             this.strokeColor = strokeColor;
+            return this;
+        }
+
+        /**
+         * @param verticalPadding Sets the vertical padding of the toast.
+         */
+        public Builder verticalPadding(int verticalPadding) {
+            this.verticalPadding = Utils.toDp(context, verticalPadding);
+            return this;
+        }
+        /**
+         * @param iconSize Sets the icon size for both start and end icons.
+         */
+        public Builder iconSize(int iconSize) {
+            this.iconSize = Utils.toDp(context, iconSize);
             return this;
         }
 
